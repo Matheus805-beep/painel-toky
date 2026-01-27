@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAINEL TOKY</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: linear-gradient(180deg, #020b1a, #000814);
+    font-family: Arial, Helvetica, sans-serif;
+    color: #00c3ff;
+}
+
+.container {
+    max-width: 420px;
+    margin: auto;
+    padding: 12px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.header h1 {
+    margin: 4px 0;
+    font-size: 22px;
+}
+
+.header p {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.tabs button {
+    flex: 1;
+    background: #001d3d;
+    color: #00c3ff;
+    border: 1px solid #00c3ff;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.tabs button.active {
+    background: #00c3ff;
+    color: #000;
+}
+
+.tab {
+    display: none;
+    background: #00142b;
+    border: 1px solid #00c3ff;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.tab.active {
+    display: block;
+}
+
+.section {
+    margin-bottom: 12px;
+}
+
+.section h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #00c3ff;
+    padding-bottom: 4px;
+}
+
+label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 13px;
+}
+
+input[type="checkbox"] {
+    transform: scale(1.2);
+}
+
+input[type="range"] {
+    width: 100%;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    background: #000;
+    border: 1px solid #00c3ff;
+    border-radius: 6px;
+    color: #00c3ff;
+}
+
+button.main {
+    width: 100%;
+    padding: 12px;
+    background: #00c3ff;
+    border: none;
+    border-radius: 10px;
+    color: #000;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button.inject {
+    width: 100%;
+    padding: 10px;
+    background: #001d3d;
+    border: 1px solid #00c3ff;
+    border-radius: 10px;
+    color: #00c3ff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.message {
+    display: none;
+    position: fixed;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #000814;
+    border: 1px solid #00c3ff;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    z-index: 999;
+}
+
+.message button {
+    margin-top: 10px;
+    padding: 6px 14px;
+    background: #00c3ff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>FFH4X.menorzin</h1>
+        <p>Produção: TOKYEZZ</p>
+    </div>
+
+    <div class="tabs">
+        <button class="active" onclick="openTab(0)">Principal</button>
+        <button onclick="openTab(1)">AIM BOT</button>
+        <button onclick="openTab(2)">ULTRA</button>
+        <button onclick="openTab(3)">Desempenho</button>
+    </div>
+
+    <!-- PRINCIPAL -->
+    <div class="tab active">
+        <div class="section">
+            <h3>Autorização</h3>
+            <input type="text" id="key" placeholder="Ativar Key 🔐">
+        </div>
+
+        <div class="section">
+            <button class="inject" id="injectBtn" onclick="inject()">INJETAR</button>
+        </div>
+
+        <div class="section">
+            <button class="main" onclick="start()">🔘 Iniciar Auxílio</button>
+        </div>
+    </div>
+
+    <!-- AIMBOT -->
+    <div class="tab">
+        <div class="section">
+            <label>☑️ Aimbot <input type="checkbox"></label>
+            <label>🎯 Aimbot Strong</label>
+            <input type="range" min="0" max="100">
+            <label>📐 Aim FOV</label>
+            <input type="range" min="0" max="100">
+        </div>
+
+        <div class="section">
+            <h3>HS</h3>
+            <label>HS Cabeça <input type="checkbox"></label>
+            <label>HS Peito <input type="checkbox"></label>
+            <label>HS Pescoço <input type="checkbox"></label>
+            <label>HS Quadril <input type="checkbox"></label>
+        </div>
+    </div>
+
+    <!-- ULTRA -->
+    <div class="tab">
+        <label>Mira Suave <input type="checkbox"></label>
+        <label>Mira Silenciosa <input type="checkbox"></label>
+        <label>Disparo Automático <input type="checkbox"></label>
+        <label>Verificação de Visibilidade <input type="checkbox"></label>
+        <label>Ignorar Bots <input type="checkbox"></label>
+        <label>Troca Automática de Alvo <input type="checkbox"></label>
+        <label>Predição de Movimento <input type="checkbox"></label>
+    </div>
+
+    <!-- DESEMPENHO -->
+    <div class="tab">
+        <label>Modo Desempenho <input type="checkbox"></label>
+        <label>Modo Suave <input type="checkbox"></label>
+        <label>No Lag <input type="checkbox"></label>
+    </div>
+
+</div>
+
+<div class="message" id="msg">
+    <p id="msgText"></p>
+    <button onclick="closeMsg()">OK</button>
+</div>
+
+<script>
+let injected = false;
+
+function openTab(index) {
+    document.querySelectorAll('.tab').forEach((t,i)=> {
+        t.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.tabs button').forEach((b,i)=> {
+        b.classList.toggle('active', i === index);
+    });
+}
+
+function showMsg(text) {
+    document.getElementById('msgText').innerText = text;
+    document.getElementById('msg').style.display = 'block';
+}
+
+function closeMsg() {
+    document.getElementById('msg').style.display = 'none';
+}
+
+function inject() {
+    const btn = document.getElementById('injectBtn');
+    btn.innerText = "Injetando códigos...";
+    injected = false;
+    setTimeout(() => {
+        btn.innerText = "Códigos injetados com sucesso";
+        injected = true;
+    }, 5000);
+}
+
+function start() {
+    const key = document.getElementById('key').value;
+    if (!key) {
+        showMsg("adicione a Key antes de prosseguir");
+        return;
+    }
+    if (key !== "KEY2026") {
+        showMsg("Key incorreta");
+        return;
+    }
+    showMsg("Auxílio ativado/desativado");
+}
+</script>
+</body>
+</html>
