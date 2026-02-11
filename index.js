@@ -4,12 +4,16 @@ const {
   EmbedBuilder, 
   ActionRowBuilder, 
   ButtonBuilder, 
-  ButtonStyle 
+  ButtonStyle,
+  ChannelType,
+  PermissionsBitField
 } = require("discord.js");
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
+
+const filas = {};
 
 client.once("ready", () => {
   console.log(`✅ ORG TK online como ${client.user.tag}`);
@@ -25,27 +29,17 @@ client.on("interactionCreate", async (interaction) => {
         const embed = new EmbedBuilder()
           .setAuthor({ name: "ORG TK • Sistema Oficial" })
           .setTitle("🎮 Painel de Partidas")
-          .setDescription(
-            "Bem-vindo ao sistema da **ORG TK**.\n\n" +
-            "1️⃣ Escolha o modo\n" +
-            "2️⃣ Escolha o valor\n" +
-            "3️⃣ Entre na fila\n\n" +
-            "⚡ Sistema automático."
-          )
-          .setColor("#0099ff")
-          .setFooter({ text: "ORG TK © 2026" });
+          .setDescription("Escolha o modo para iniciar a fila.")
+          .setColor("#0099ff");
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("modo_1v1").setLabel("🔥 1v1").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_2v2").setLabel("⚔ 2v2").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_3v3").setLabel("💥 3v3").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_4v4").setLabel("👑 4v4").setStyle(ButtonStyle.Primary)
+          new ButtonBuilder().setCustomId("modo_1v1").setLabel("1v1").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_2v2").setLabel("2v2").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_3v3").setLabel("3v3").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_4v4").setLabel("4v4").setStyle(ButtonStyle.Primary)
         );
 
-        await interaction.reply({
-          embeds: [embed],
-          components: [row]
-        });
+        await interaction.reply({ embeds: [embed], components: [row] });
       }
     }
 
@@ -58,50 +52,61 @@ client.on("interactionCreate", async (interaction) => {
         const modo = interaction.customId.replace("modo_", "");
 
         const embed = new EmbedBuilder()
-          .setAuthor({ name: "ORG TK • Seleção de Valor" })
           .setTitle(`💰 Modo ${modo.toUpperCase()}`)
-          .setDescription("Escolha o valor da partida abaixo:")
-          .setColor("#00c3ff");
+          .setDescription("Escolha o valor da partida:")
+          .setColor("Green");
 
         const valores = [1, 5, 10, 20, 50, 100];
-        const row = new ActionRowBuilder();
 
-        valores.forEach(valor => {
-          row.addComponents(
-            new ButtonBuilder()
-              .setCustomId(`valor_${modo}_${valor}`)
-              .setLabel(`💲 ${valor}`)
-              .setStyle(ButtonStyle.Secondary)
-          );
+        const row1 = new ActionRowBuilder();
+        const row2 = new ActionRowBuilder();
+
+        valores.forEach((valor, index) => {
+          const botao = new ButtonBuilder()
+            .setCustomId(`valor_${modo}_${valor}`)
+            .setLabel(`${valor}`)
+            .setStyle(ButtonStyle.Secondary);
+
+          if (index < 5) row1.addComponents(botao);
+          else row2.addComponents(botao);
         });
 
         await interaction.update({
           embeds: [embed],
-          components: [row]
+          components: [row1, row2]
         });
       }
 
-      // ESCOLHER VALOR
+      // CRIAR FILA
       else if (interaction.customId.startsWith("valor_")) {
 
         const partes = interaction.customId.split("_");
         const modo = partes[1];
         const valor = partes[2];
 
+        const maxJogadores = parseInt(modo[0]) * 2; // 1v1 = 2 jogadores
+        const filaId = `${modo}_${valor}`;
+
+        filas[filaId] = {
+          modo,
+          valor,
+          jogadores: [],
+          max: maxJogadores
+        };
+
         const embed = new EmbedBuilder()
-          .setAuthor({ name: "ORG TK • Fila Criada" })
-          .setTitle("🎮 Partida Configurada")
+          .setTitle("🎮 Fila Criada")
           .setDescription(
-            `🏆 Modo: ${modo.toUpperCase()}\n` +
-            `💰 Valor: ${valor}\n\n` +
-            "Clique abaixo para entrar na fila."
+            `Modo: ${modo.toUpperCase()}\n` +
+            `Valor: ${valor}\n\n` +
+            `Jogadores: 0/${maxJogadores}`
           )
-          .setColor("#007bff");
+          .setColor("Blue");
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setCustomId(`entrar_${modo}_${valor}`)
-            .setLabel("✅ Entrar na Fila")
+            .setCustomId(`entrar_${filaId}`)
+            .setLabel("Entrar")
             .setStyle(ButtonStyle.Success)
         );
 
@@ -111,13 +116,56 @@ client.on("interactionCreate", async (interaction) => {
         });
       }
 
-      // ENTRAR
+      // ENTRAR NA FILA
       else if (interaction.customId.startsWith("entrar_")) {
 
-        await interaction.reply({
-          content: "✅ Você entrou na fila com sucesso!",
-          ephemeral: true
+        const filaId = interaction.customId.replace("entrar_", "");
+        const fila = filas[filaId];
+
+        if (!fila.jogadores.includes(interaction.user.id)) {
+          fila.jogadores.push(interaction.user.id);
+        }
+
+        // Atualiza embed
+        const embed = new EmbedBuilder()
+          .setTitle("🎮 Fila Atualizada")
+          .setDescription(
+            `Modo: ${fila.modo.toUpperCase()}\n` +
+            `Valor: ${fila.valor}\n\n` +
+            `Jogadores (${fila.jogadores.length}/${fila.max}):\n` +
+            fila.jogadores.map(id => `<@${id}>`).join("\n")
+          )
+          .setColor("Blue");
+
+        await interaction.update({
+          embeds: [embed]
         });
+
+        // SE COMPLETAR → CRIA CANAL
+        if (fila.jogadores.length >= fila.max) {
+
+          const canal = await interaction.guild.channels.create({
+            name: `partida-${fila.modo}-${fila.valor}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.id,
+                deny: [PermissionsBitField.Flags.ViewChannel]
+              },
+              ...fila.jogadores.map(id => ({
+                id: id,
+                allow: [PermissionsBitField.Flags.ViewChannel]
+              }))
+            ]
+          });
+
+          await canal.send(
+            `🔥 Partida iniciada!\nModo: ${fila.modo}\nValor: ${fila.valor}\n\nJogadores:\n` +
+            fila.jogadores.map(id => `<@${id}>`).join("\n")
+          );
+
+          delete filas[filaId];
+        }
       }
     }
 
