@@ -1,10 +1,10 @@
-const { 
-  Client, 
-  GatewayIntentBits, 
-  EmbedBuilder, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
+const {
+  Client,
+  GatewayIntentBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
   ChannelType,
   PermissionsBitField,
   REST,
@@ -13,10 +13,7 @@ const {
 } = require("discord.js");
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
-  ]
+  intents: [GatewayIntentBits.Guilds]
 });
 
 const TOKEN = process.env.TOKEN;
@@ -35,35 +32,38 @@ const modos = {
 const valores = [1, 5, 10, 20, 50, 100];
 
 client.once("ready", async () => {
-  console.log(`Bot online como ${client.user.tag}`);
+  console.log(`🔥 Bot online como ${client.user.tag}`);
 
   const commands = [
     new SlashCommandBuilder()
       .setName("painel")
-      .setDescription("Enviar painel de fila")
+      .setDescription("Abrir painel de filas")
       .toJSON()
   ];
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commands }
-    );
-    console.log("Comando /painel registrado com sucesso!");
-  } catch (error) {
-    console.error(error);
-  }
+  await rest.put(
+    Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+    { body: commands }
+  );
+
+  console.log("✅ Comando /painel registrado!");
 });
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
+  // ===== COMANDO /painel =====
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "painel") {
 
-      const rowModos = new ActionRowBuilder().addComponents(
+      const embed = new EmbedBuilder()
+        .setTitle("🎮 PAINEL DE FILAS")
+        .setDescription("Escolha o modo da partida:")
+        .setColor("#5865F2");
+
+      const row = new ActionRowBuilder().addComponents(
         Object.keys(modos).map(modo =>
           new ButtonBuilder()
             .setCustomId(`modo_${modo}`)
@@ -73,48 +73,70 @@ client.on("interactionCreate", async (interaction) => {
       );
 
       return interaction.reply({
-        content: "Escolha o modo:",
-        components: [rowModos]
+        embeds: [embed],
+        components: [row]
       });
     }
   }
 
+  // ===== BOTÕES =====
   if (interaction.isButton()) {
+
     const id = interaction.customId;
 
+    // ===== ESCOLHER MODO =====
     if (id.startsWith("modo_")) {
+
       const modo = id.split("_")[1];
 
-      const rowValores = new ActionRowBuilder().addComponents(
+      const embed = new EmbedBuilder()
+        .setTitle(`⚔️ Modo selecionado: ${modo}`)
+        .setDescription("Agora escolha o valor:")
+        .setColor("#57F287");
+
+      const row = new ActionRowBuilder().addComponents(
         valores.map(valor =>
           new ButtonBuilder()
             .setCustomId(`valor_${modo}_${valor}`)
-            .setLabel(`${valor}`)
+            .setLabel(`R$${valor}`)
             .setStyle(ButtonStyle.Success)
         )
       );
 
       return interaction.update({
-        content: `Modo selecionado: ${modo}\nEscolha o valor:`,
-        components: [rowValores]
+        embeds: [embed],
+        components: [row]
       });
     }
 
+    // ===== ESCOLHER VALOR =====
     if (id.startsWith("valor_")) {
-      const [, modo, valor] = id.split("_");
 
+      const [, modo, valor] = id.split("_");
       const chave = `${modo}_${valor}`;
 
       if (!filas[chave]) filas[chave] = [];
 
       if (filas[chave].includes(interaction.user.id)) {
-        return interaction.reply({ content: "Você já está nessa fila!", ephemeral: true });
+        return interaction.reply({
+          content: "❌ Você já está nessa fila!",
+          ephemeral: true
+        });
       }
 
       filas[chave].push(interaction.user.id);
 
       const limite = modos[modo];
 
+      const embed = new EmbedBuilder()
+        .setTitle(`🔥 Fila ${modo} - R$${valor}`)
+        .setDescription(
+          `Jogadores: ${filas[chave].length}/${limite}\n\n` +
+          filas[chave].map(id => `<@${id}>`).join("\n")
+        )
+        .setColor("#FEE75C");
+
+      // ===== SE COMPLETAR =====
       if (filas[chave].length >= limite) {
 
         const guild = interaction.guild;
@@ -134,18 +156,25 @@ client.on("interactionCreate", async (interaction) => {
           ]
         });
 
-        await canal.send(`🔥 Partida formada!\nModo: ${modo}\nValor: ${valor}\nJogadores: ${filas[chave].map(id => `<@${id}>`).join(", ")}`);
+        await canal.send({
+          content: `🔥 Partida formada!\nModo: ${modo}\nValor: R$${valor}\n\n${filas[chave].map(id => `<@${id}>`).join(" ")}`
+        });
 
         filas[chave] = [];
 
+        const embedFinal = new EmbedBuilder()
+          .setTitle("✅ Partida Criada!")
+          .setDescription(`Canal ${canal} criado com sucesso.`)
+          .setColor("#ED4245");
+
         return interaction.update({
-          content: `🔥 Partida formada para ${modo} - ${valor}!`,
+          embeds: [embedFinal],
           components: []
         });
       }
 
       return interaction.update({
-        content: `Fila ${modo} - ${valor}\nJogadores: ${filas[chave].length}/${limite}`,
+        embeds: [embed],
         components: interaction.message.components
       });
     }
