@@ -19,6 +19,22 @@ client.once("ready", () => {
   console.log(`✅ ORG TK online como ${client.user.tag}`);
 });
 
+function criarEmbedFila(fila) {
+  return new EmbedBuilder()
+    .setAuthor({ name: "ORG TK • Sistema Oficial" })
+    .setTitle("🎮 Fila Ativa")
+    .setDescription(
+      `🏆 **Modo:** ${fila.modo.toUpperCase()}\n` +
+      `💰 **Valor:** ${fila.valor}\n\n` +
+      `👥 **Jogadores (${fila.jogadores.length}/${fila.max}):**\n` +
+      (fila.jogadores.length > 0
+        ? fila.jogadores.map(id => `<@${id}>`).join("\n")
+        : "Ninguém entrou ainda.")
+    )
+    .setColor("#0099ff")
+    .setFooter({ text: "ORG TK © Sistema Automático" });
+}
+
 client.on("interactionCreate", async (interaction) => {
   try {
 
@@ -29,32 +45,39 @@ client.on("interactionCreate", async (interaction) => {
         const embed = new EmbedBuilder()
           .setAuthor({ name: "ORG TK • Sistema Oficial" })
           .setTitle("🎮 Painel de Partidas")
-          .setDescription("Escolha o modo para iniciar a fila.")
-          .setColor("#0099ff");
+          .setDescription(
+            "Bem-vindo ao sistema de filas da **ORG TK**.\n\n" +
+            "1️⃣ Escolha o modo\n" +
+            "2️⃣ Escolha o valor\n" +
+            "3️⃣ Entre na fila\n\n" +
+            "⚡ A partida inicia automaticamente."
+          )
+          .setColor("#0099ff")
+          .setFooter({ text: "ORG TK © 2026" });
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("modo_1v1").setLabel("1v1").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_2v2").setLabel("2v2").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_3v3").setLabel("3v3").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("modo_4v4").setLabel("4v4").setStyle(ButtonStyle.Primary)
+          new ButtonBuilder().setCustomId("modo_1v1").setLabel("🔥 1v1").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_2v2").setLabel("⚔ 2v2").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_3v3").setLabel("💥 3v3").setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId("modo_4v4").setLabel("👑 4v4").setStyle(ButtonStyle.Primary)
         );
 
         await interaction.reply({ embeds: [embed], components: [row] });
       }
     }
 
-    // ===== BOTÕES =====
     if (interaction.isButton()) {
 
-      // ESCOLHER MODO
+      // ===== ESCOLHER MODO =====
       if (interaction.customId.startsWith("modo_")) {
 
         const modo = interaction.customId.replace("modo_", "");
 
         const embed = new EmbedBuilder()
+          .setAuthor({ name: "ORG TK • Seleção de Valor" })
           .setTitle(`💰 Modo ${modo.toUpperCase()}`)
-          .setDescription("Escolha o valor da partida:")
-          .setColor("Green");
+          .setDescription("Escolha o valor da partida abaixo:")
+          .setColor("#00c3ff");
 
         const valores = [1, 5, 10, 20, 50, 100];
 
@@ -64,7 +87,7 @@ client.on("interactionCreate", async (interaction) => {
         valores.forEach((valor, index) => {
           const botao = new ButtonBuilder()
             .setCustomId(`valor_${modo}_${valor}`)
-            .setLabel(`${valor}`)
+            .setLabel(`💲 ${valor}`)
             .setStyle(ButtonStyle.Secondary);
 
           if (index < 5) row1.addComponents(botao);
@@ -77,14 +100,14 @@ client.on("interactionCreate", async (interaction) => {
         });
       }
 
-      // CRIAR FILA
+      // ===== CRIAR FILA =====
       else if (interaction.customId.startsWith("valor_")) {
 
         const partes = interaction.customId.split("_");
         const modo = partes[1];
         const valor = partes[2];
+        const maxJogadores = parseInt(modo[0]) * 2;
 
-        const maxJogadores = parseInt(modo[0]) * 2; // 1v1 = 2 jogadores
         const filaId = `${modo}_${valor}`;
 
         filas[filaId] = {
@@ -94,29 +117,24 @@ client.on("interactionCreate", async (interaction) => {
           max: maxJogadores
         };
 
-        const embed = new EmbedBuilder()
-          .setTitle("🎮 Fila Criada")
-          .setDescription(
-            `Modo: ${modo.toUpperCase()}\n` +
-            `Valor: ${valor}\n\n` +
-            `Jogadores: 0/${maxJogadores}`
-          )
-          .setColor("Blue");
-
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`entrar_${filaId}`)
-            .setLabel("Entrar")
-            .setStyle(ButtonStyle.Success)
+            .setLabel("✅ Entrar")
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`sair_${filaId}`)
+            .setLabel("❌ Sair")
+            .setStyle(ButtonStyle.Danger)
         );
 
         await interaction.update({
-          embeds: [embed],
+          embeds: [criarEmbedFila(filas[filaId])],
           components: [row]
         });
       }
 
-      // ENTRAR NA FILA
+      // ===== ENTRAR =====
       else if (interaction.customId.startsWith("entrar_")) {
 
         const filaId = interaction.customId.replace("entrar_", "");
@@ -126,22 +144,11 @@ client.on("interactionCreate", async (interaction) => {
           fila.jogadores.push(interaction.user.id);
         }
 
-        // Atualiza embed
-        const embed = new EmbedBuilder()
-          .setTitle("🎮 Fila Atualizada")
-          .setDescription(
-            `Modo: ${fila.modo.toUpperCase()}\n` +
-            `Valor: ${fila.valor}\n\n` +
-            `Jogadores (${fila.jogadores.length}/${fila.max}):\n` +
-            fila.jogadores.map(id => `<@${id}>`).join("\n")
-          )
-          .setColor("Blue");
-
         await interaction.update({
-          embeds: [embed]
+          embeds: [criarEmbedFila(fila)],
+          components: interaction.message.components
         });
 
-        // SE COMPLETAR → CRIA CANAL
         if (fila.jogadores.length >= fila.max) {
 
           const canal = await interaction.guild.channels.create({
@@ -160,12 +167,26 @@ client.on("interactionCreate", async (interaction) => {
           });
 
           await canal.send(
-            `🔥 Partida iniciada!\nModo: ${fila.modo}\nValor: ${fila.valor}\n\nJogadores:\n` +
+            `🔥 Partida iniciada!\n\n` +
             fila.jogadores.map(id => `<@${id}>`).join("\n")
           );
 
           delete filas[filaId];
         }
+      }
+
+      // ===== SAIR =====
+      else if (interaction.customId.startsWith("sair_")) {
+
+        const filaId = interaction.customId.replace("sair_", "");
+        const fila = filas[filaId];
+
+        fila.jogadores = fila.jogadores.filter(id => id !== interaction.user.id);
+
+        await interaction.update({
+          embeds: [criarEmbedFila(fila)],
+          components: interaction.message.components
+        });
       }
     }
 
