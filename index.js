@@ -82,103 +82,92 @@ client.on("interactionCreate", async (interaction) => {
   // ===== BOTÕES =====
   if (interaction.isButton()) {
 
-    const id = interaction.customId;
+  await interaction.deferUpdate(); // responde instantaneamente ao Discord
 
-    // ===== ESCOLHER MODO =====
-    if (id.startsWith("modo_")) {
+  const id = interaction.customId;
 
-      const modo = id.split("_")[1];
+  // ===== ESCOLHER MODO =====
+  if (id.startsWith("modo_")) {
 
-      const embed = new EmbedBuilder()
-        .setTitle(`⚔️ Modo selecionado: ${modo}`)
-        .setDescription("Agora escolha o valor:")
-        .setColor("#57F287");
+    const modo = id.split("_")[1];
 
-      const row = new ActionRowBuilder().addComponents(
-        valores.map(valor =>
-          new ButtonBuilder()
-            .setCustomId(`valor_${modo}_${valor}`)
-            .setLabel(`R$${valor}`)
-            .setStyle(ButtonStyle.Success)
-        )
+    const embed = new EmbedBuilder()
+      .setTitle(`⚔️ Modo selecionado: ${modo}`)
+      .setDescription("Agora escolha o valor:")
+      .setColor("#57F287");
+
+    const row = new ActionRowBuilder().addComponents(
+      valores.map(valor =>
+        new ButtonBuilder()
+          .setCustomId(`valor_${modo}_${valor}`)
+          .setLabel(`R$${valor}`)
+          .setStyle(ButtonStyle.Success)
+      )
+    );
+
+    return interaction.editReply({
+      embeds: [embed],
+      components: [row]
+    });
+  }
+
+  // ===== ESCOLHER VALOR =====
+  if (id.startsWith("valor_")) {
+
+    const [, modo, valor] = id.split("_");
+    const chave = `${modo}_${valor}`;
+
+    if (!filas[chave]) filas[chave] = [];
+
+    if (!filas[chave].includes(interaction.user.id)) {
+      filas[chave].push(interaction.user.id);
+    }
+
+    const limite = modos[modo];
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🔥 Fila ${modo} - R$${valor}`)
+      .setDescription(
+        `Jogadores: ${filas[chave].length}/${limite}\n\n` +
+        filas[chave].map(id => `<@${id}>`).join("\n")
+      )
+      .setColor("#FEE75C");
+
+    if (filas[chave].length >= limite) {
+
+      const guild = interaction.guild;
+
+      const canal = await guild.channels.create({
+        name: `⚔️-${modo}-${valor}`,
+        type: ChannelType.GuildText,
+        permissionOverwrites: [
+          {
+            id: guild.id,
+            deny: [PermissionsBitField.Flags.ViewChannel]
+          },
+          ...filas[chave].map(id => ({
+            id,
+            allow: [PermissionsBitField.Flags.ViewChannel]
+          }))
+        ]
+      });
+
+      await canal.send(
+        `🔥 Partida formada!\nModo: ${modo}\nValor: R$${valor}\n\n${filas[chave].map(id => `<@${id}>`).join(" ")}`
       );
 
-      return interaction.update({
-        embeds: [embed],
-        components: [row]
+      filas[chave] = [];
+
+      return interaction.editReply({
+        content: `✅ Partida criada! Canal: ${canal}`,
+        embeds: [],
+        components: []
       });
     }
 
-    // ===== ESCOLHER VALOR =====
-    if (id.startsWith("valor_")) {
-
-      const [, modo, valor] = id.split("_");
-      const chave = `${modo}_${valor}`;
-
-      if (!filas[chave]) filas[chave] = [];
-
-      if (filas[chave].includes(interaction.user.id)) {
-        return interaction.reply({
-          content: "❌ Você já está nessa fila!",
-          ephemeral: true
-        });
-      }
-
-      filas[chave].push(interaction.user.id);
-
-      const limite = modos[modo];
-
-      const embed = new EmbedBuilder()
-        .setTitle(`🔥 Fila ${modo} - R$${valor}`)
-        .setDescription(
-          `Jogadores: ${filas[chave].length}/${limite}\n\n` +
-          filas[chave].map(id => `<@${id}>`).join("\n")
-        )
-        .setColor("#FEE75C");
-
-      // ===== SE COMPLETAR =====
-      if (filas[chave].length >= limite) {
-
-        const guild = interaction.guild;
-
-        const canal = await guild.channels.create({
-          name: `⚔️-${modo}-${valor}`,
-          type: ChannelType.GuildText,
-          permissionOverwrites: [
-            {
-              id: guild.id,
-              deny: [PermissionsBitField.Flags.ViewChannel]
-            },
-            ...filas[chave].map(id => ({
-              id,
-              allow: [PermissionsBitField.Flags.ViewChannel]
-            }))
-          ]
-        });
-
-        await canal.send({
-          content: `🔥 Partida formada!\nModo: ${modo}\nValor: R$${valor}\n\n${filas[chave].map(id => `<@${id}>`).join(" ")}`
-        });
-
-        filas[chave] = [];
-
-        const embedFinal = new EmbedBuilder()
-          .setTitle("✅ Partida Criada!")
-          .setDescription(`Canal ${canal} criado com sucesso.`)
-          .setColor("#ED4245");
-
-        return interaction.update({
-          embeds: [embedFinal],
-          components: []
-        });
-      }
-
-      return interaction.update({
-        embeds: [embed],
-        components: interaction.message.components
-      });
-    }
+    return interaction.editReply({
+      embeds: [embed],
+      components: interaction.message.components
+    });
   }
-});
-
-client.login(TOKEN);
+}
