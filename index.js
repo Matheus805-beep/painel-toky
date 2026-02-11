@@ -1,26 +1,4 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-
-const commands = [
-  new SlashCommandBuilder()
-    .setName('painel')
-    .setDescription('Enviar painel de fila')
-    .toJSON()
-];
-
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-
-(async () => {
-  try {
-    console.log('Registrando comandos...');
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: commands }
-    );
-    console.log('Comandos registrados com sucesso!');
-  } catch (error) {
-    console.error(error);
-  }
-})();const { 
+const { 
   Client, 
   GatewayIntentBits, 
   EmbedBuilder, 
@@ -28,7 +6,10 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   ButtonBuilder, 
   ButtonStyle, 
   ChannelType,
-  PermissionsBitField 
+  PermissionsBitField,
+  REST,
+  Routes,
+  SlashCommandBuilder
 } = require("discord.js");
 
 const client = new Client({
@@ -39,6 +20,8 @@ const client = new Client({
 });
 
 const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 
 const filas = {};
 
@@ -51,14 +34,32 @@ const modos = {
 
 const valores = [1, 5, 10, 20, 50, 100];
 
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`Bot online como ${client.user.tag}`);
+
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("painel")
+      .setDescription("Enviar painel de fila")
+      .toJSON()
+  ];
+
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log("Comando /painel registrado com sucesso!");
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
-  // Comando /painel
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "painel") {
 
@@ -78,7 +79,6 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // Botões
   if (interaction.isButton()) {
     const id = interaction.customId;
 
